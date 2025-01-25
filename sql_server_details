@@ -1,0 +1,20 @@
+Username: annap
+Database name: annap
+Password: passaword
+    Host name: mysqlsrv1.cs.tau.ac.il
+
+mysql -u danielbarlev -h mysqlsrv1.cs.tau.ac.il danielbarlev -p
+
+ssh -L 3305:mysqlsrv1.cs.tau.ac.il:3306 danielbarlev@nova.cs.tau.ac.il
+
+    source port:
+127.0.0.2:3333
+    destination:
+mysqlsrv1.cs.tau.ac.il:3306
+
+GRANT ALL PRIVILEGES ON *.* TO 'danielbarlev'@'%' IDENTIFIED BY 'dan797057';
+FLUSH PRIVILEGES;
+
+
+
+ssh -L 3305:mysqlsrv1.cs.tau.ac.il:3306 danielbarlev@nova.cs.tau.ac.il
