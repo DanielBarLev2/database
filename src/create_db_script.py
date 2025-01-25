@@ -1,0 +1,1 @@
+# Contains code responsible for creating the database.
