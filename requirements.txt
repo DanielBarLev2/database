@@ -1,2 +1,5 @@
 sshtunnel==0.4.0
 kagglehub==0.3.6
+mysql-connector-python==9.2.0
+pandas==2.2.3
+kaggle==1.6.17
