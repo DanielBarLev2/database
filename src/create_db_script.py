@@ -2,7 +2,8 @@
 
 import os
 import json
-import kaggle
+
+import pandas as pd
 import mysql.connector
 from sshtunnel import SSHTunnelForwarder
 
@@ -11,20 +12,25 @@ from config import config as cfg
 
 def download_and_extract_dataset():
     """
-    Creates a directory named /data and downloads and unzip the dataset from kaggle.
+    Creates a directory named /data and downloads and unzip the dataset from .kaggle.
 
     Expected files:
         data/tmdb_5000_credits.csv
         data/tmdb_5000_movies.csv
     """
+    # set the path to the directory containing .kaggle.json
+    kaggle_config_path = os.path.join(os.getcwd(), ".kaggle")
+    os.environ["KAGGLE_CONFIG_DIR"] = kaggle_config_path
+
     try:
         os.makedirs(cfg.DOWNLOAD_PATH, exist_ok=False)
-
         try:
+            # this import must come after changing environment path config
+            import kaggle
             kaggle.api.authenticate()
             kaggle.api.dataset_download_files(cfg.DATASET_NAME, path=cfg.DOWNLOAD_PATH, unzip=True)
         except:
-            raise "kaggle.json must be placed in ~/.kaggle (usually at users/user)"
+            raise ".kaggle.json is missing or invalid"
 
         print(f"dataset downloaded and unzipped and saved to {cfg.DOWNLOAD_PATH}.")
 
@@ -34,7 +40,10 @@ def download_and_extract_dataset():
 
 def create_database_schema(cursor):
     """
-        Initializes the database schema from the queries in create_table_queries.
+    Creates the database schema by executing SQL queries to create tables.
+
+    :param cursor: A database cursor object used to execute SQL queries.
+    :return: None
     """
     print("creating database schema...")
 
@@ -116,17 +125,19 @@ def create_database_schema(cursor):
         cursor.execute(query)
 
         table_name = table.split('_')[1]
-        print(f"* {table_name} table was created successfully")
+        print(f"* {table_name} table was created")
 
-    print("Database schema created successfully!")
+    print("database schema created successfully!")
 
 
 
-def load_data_to_database(cursor):
+def load_data_to_database(cursor, connection):
     """
-        @todo: Load the dataset into the database.
+        Load the dataset into the database.
     """
-    pass
+    # Load datasets
+    movies_data = pd.read_csv(cfg.MOVIE_DATA_PATH)
+    credits_data = pd.read_csv(cfg.CREDITS_DATA_PATH)
 
 
 
@@ -143,7 +154,7 @@ def main():
             local_bind_address=cfg.SSH_CONFIG['local_bind_address']
     ) as tunnel:
 
-        print(f"Tunnel established: Local port {tunnel.local_bind_port}")
+        print(f"tunnel established: Local port {tunnel.local_bind_port}")
 
         try:
             print("connecting to MySQL server...")
@@ -156,11 +167,10 @@ def main():
                 connection_timeout=10
             )
 
-            print("connected to MySQL server")
             cursor = connection.cursor()
 
             create_database_schema(cursor)
-            load_data_to_database(cursor)
+            # load_data_to_database(cursor)
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")

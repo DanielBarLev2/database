@@ -4,6 +4,9 @@ import os
 DATASET_NAME = "tmdb/tmdb-movie-metadata"
 DOWNLOAD_PATH = os.path.join(os.getcwd(), "data")
 
+MOVIE_DATA_PATH = os.path.join(DOWNLOAD_PATH, "tmdb_5000_movies.csv")
+CREDITS_DATA_PATH = os.path.join(DOWNLOAD_PATH, "tmdb_5000_credits.csv")
+
 SSH_CONFIG = {
     "ssh_address_or_host": ("nova.cs.tau.ac.il", 22),
     "ssh_username": "danielbarlev",
