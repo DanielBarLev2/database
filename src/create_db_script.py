@@ -130,16 +130,116 @@ def create_database_schema(cursor):
     print("database schema created successfully!")
 
 
+def drop_all_tables(cursor, connection):
+    """
+        Drops all tables in the current database.
+    """
+    try:
+        cursor.execute("SHOW TABLES;")
+        tables = cursor.fetchall()
+
+        if not tables:
+            print("No tables found in the database.")
+            return
+
+        # disable foreign key checks to avoid errors while dropping tables
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+
+        for (table_name,) in tables:
+            cursor.execute(f"DROP TABLE {table_name};")
+            print(f"* {table_name} table was dropped.")
+
+        # re-enable foreign key checks
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+
+        connection.commit()
+        print("All tables dropped successfully.")
+
+    except Exception as e:
+        print(f"Error while dropping tables: {e}")
+        connection.rollback()
+
 
 def load_data_to_database(cursor, connection):
     """
         Load the dataset into the database.
+        This is only done if the tables are empty, since its initialize the database.
     """
-    # Load datasets
+
+    # load datasets
     movies_data = pd.read_csv(cfg.MOVIE_DATA_PATH)
     credits_data = pd.read_csv(cfg.CREDITS_DATA_PATH)
 
+    def get_table_columns(_cursor, _table_name):
+        """
+        @:return: the column names of a given table.
+        """
+        _cursor.execute(f"DESCRIBE {_table_name}")
+        return [_row[0] for _row in _cursor.fetchall()]
 
+    def handle_missing_values(_data):
+        """
+            Handles missing values in the dataset by replacing them with defaults.
+            - NaN Numeric columns are replaced with 0
+            - NaN String columns are replaced with an empty string
+            - Replace invalid or empty dates with NaT (Not a Time)
+        """
+        for column in _data.columns:
+            if column == 'release_date':
+
+                _data[column] = pd.to_datetime(_data[column], errors='coerce')
+                _data[column] = _data[column].where(_data[column].notnull(), None)
+
+            elif _data[column].dtype == 'object':
+                _data[column].fillna('', inplace=True)
+
+            else:
+                _data[column].fillna(0, inplace=True)
+
+        return _data
+
+    def insert_data(_cursor, _table_name, _data):
+        """
+        Inserts data into a specified table.
+        """
+        # skips if already loaded
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+        row_count = cursor.fetchone()[0]
+        if row_count > 0:
+            print(f"{table_name} table was already loaded. skip insertion")
+            return
+
+        _columns = get_table_columns(_cursor, _table_name)
+
+        # change name from csv column -> sql table column
+        column_mapping = {col: col for col in _columns}
+        if "id" in _data.columns and "movie_id" in _columns:
+            column_mapping["id"] = "movie_id"
+
+        _data = _data.rename(columns=column_mapping)
+        _data = _data[_columns]
+
+        # handle missing values
+        _data = handle_missing_values(_data)
+
+        # Generate placeholders and query
+        _placeholders = ", ".join(["%s"] * len(_columns))
+        insert_query = f"""
+            INSERT INTO {_table_name} ({', '.join(_columns)}) 
+            VALUES ({_placeholders})
+        """
+        for _, _row in _data.iterrows():
+            _cursor.execute(insert_query, tuple(_row.values))
+
+        print(f"* {_table_name} was populated.")
+
+    # populate Movies table
+    table_name ="Movies"
+    insert_data(cursor, table_name, movies_data)
+
+
+    connection.commit()
+    print("Data loading completed!")
 
 def main():
 
@@ -169,8 +269,10 @@ def main():
 
             cursor = connection.cursor()
 
+            drop_all_tables(cursor, connection)
             create_database_schema(cursor)
-            # load_data_to_database(cursor)
+            load_data_to_database(cursor, connection)
+
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")
