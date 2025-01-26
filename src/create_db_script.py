@@ -1,6 +1,7 @@
 """Contains code responsible for creating the database"""
 
 import os
+import json
 import kaggle
 import mysql.connector
 from sshtunnel import SSHTunnelForwarder
@@ -10,7 +11,7 @@ from config import config as cfg
 
 def download_and_extract_dataset():
     """
-    Creates a directory named data and downloads and unzip the dataset from kaggle.
+    Creates a directory named /data and downloads and unzip the dataset from kaggle.
 
     Expected files:
         data/tmdb_5000_credits.csv
@@ -33,15 +34,99 @@ def download_and_extract_dataset():
 
 def create_database_schema(cursor):
     """
-        @todo: Create the database schema.
+        Initializes the database schema from the queries in create_table_queries.
     """
-    print("Creating database schema...")
+    print("creating database schema...")
+
+    create_table_queries = {
+        "create_movies_table": """
+        CREATE TABLE IF NOT EXISTS Movies (
+            movie_id INT PRIMARY KEY,
+            title VARCHAR(255),
+            budget BIGINT,
+            original_language VARCHAR(10),
+            original_title VARCHAR(255),
+            release_date DATE,
+            revenue BIGINT,
+            runtime INT,
+            status VARCHAR(50),
+            vote_average FLOAT,
+            vote_count INT,
+            popularity FLOAT
+            );
+        """,
+        "create_genres_table": """
+        CREATE TABLE IF NOT EXISTS Genres (
+            genre_id INT PRIMARY KEY,
+            genre_name VARCHAR(100)
+            );
+        """,
+        "create_movie_genres_table": """
+        CREATE TABLE IF NOT EXISTS Movie_Genres (
+            movie_id INT,
+            genre_id INT,
+            PRIMARY KEY (movie_id, genre_id),
+            FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+            FOREIGN KEY (genre_id) REFERENCES Genres(genre_id)
+            );
+        """,
+        "create_production_companies_table": """
+        CREATE TABLE IF NOT EXISTS Production_Companies (
+            company_id INT PRIMARY KEY,
+            company_name VARCHAR(255)
+            );
+        """,
+        "create_movie_companies_table": """
+        CREATE TABLE IF NOT EXISTS Movie_Companies (
+            movie_id INT,
+            company_id INT,
+            PRIMARY KEY (movie_id, company_id),
+            FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+            FOREIGN KEY (company_id) REFERENCES Production_Companies(company_id)
+            );
+        """,
+        "create_credits_table": """
+        CREATE TABLE IF NOT EXISTS Credits (
+            credit_id INT PRIMARY KEY,
+            movie_id INT,
+            person_id INT,
+            role ENUM('actor', 'crew'),
+            `character` VARCHAR(255),
+            job VARCHAR(100),
+            FOREIGN KEY (movie_id) REFERENCES Movies(movie_id)
+            );
+        """,
+        "create_keywords_table": """
+        CREATE TABLE IF NOT EXISTS Keywords (
+            keyword_id INT PRIMARY KEY,
+            keyword_name VARCHAR(255)
+            );
+        """,
+        "create_movie_keywords_table": """
+        CREATE TABLE IF NOT EXISTS Movie_Keywords (
+            movie_id INT,
+            keyword_id INT,
+            PRIMARY KEY (movie_id, keyword_id),
+            FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+            FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
+            );
+        """}
+
+    for table, query in create_table_queries.items():
+        cursor.execute(query)
+
+        table_name = table.split('_')[1]
+        print(f"* {table_name} table was created successfully")
+
+    print("Database schema created successfully!")
 
 
-def load_data_to_database(cursor, connection):
+
+def load_data_to_database(cursor):
     """
         @todo: Load the dataset into the database.
     """
+    pass
 
 
 
@@ -72,11 +157,10 @@ def main():
             )
 
             print("connected to MySQL server")
-
             cursor = connection.cursor()
+
             create_database_schema(cursor)
-            print()
-            load_data_to_database(cursor, connection)
+            load_data_to_database(cursor)
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")
