@@ -1,9 +1,9 @@
 import mysql
+import mysql.connector
 from sshtunnel import SSHTunnelForwarder
-
 from config import config as cfg
 from src.api_data_retrieve import load_data_to_database
-from src.create_db_script import download_and_extract_dataset, create_database_schema
+from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
 
 def main():
@@ -34,10 +34,12 @@ def main():
 
             cursor = connection.cursor()
 
-            # drop_all_tables(cursor, connection)
+            inp = input("drop all tables? (y/n)")
+            if inp.lower() == "y":
+                drop_all_tables(cursor, connection)
+
             create_database_schema(cursor)
             load_data_to_database(cursor, connection)
-
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")
@@ -46,3 +48,6 @@ def main():
             if 'connection' in locals() and connection.is_connected():
                 connection.close()
                 print("MySQL connection closed")
+
+if __name__ == '__main__':
+    main()

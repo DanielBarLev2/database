@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from config import config as cfg
 
+
 def load_data_to_database(cursor, connection):
     """
 
@@ -48,7 +49,7 @@ def load_data_to_database(cursor, connection):
     production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_name'])
     insert_data(cursor, "Production_Companies", production_companies_df)
 
-    # Insert movie-production company relationships
+    # Insert movie-production-company relationships
     insert_foreign_data(cursor=cursor,
                         df=movies_data,
                         column1='id',
@@ -64,7 +65,7 @@ def load_data_to_database(cursor, connection):
     # Insert movie-actor relationships
     insert_foreign_data(cursor, credits_data, 'movie_id', 'cast', "Movies_Actors")
 
-    connection.commit()
+
     print("All data loading completed!")
 
 
@@ -90,16 +91,18 @@ def insert_data(cursor, table_name, df):
                 VALUES ({placeholders})
                 """
 
-    for _, row in df.head(10).iterrows():
-        cursor.execute(insert_row, tuple(row.astype(object).values))
-
+    for _, row in df.iterrows():
+        try:
+            cursor.execute(insert_row, tuple(row.astype(object).values))
+        except Exception as e:
+            print(e)
     print(f"* {table_name} was populated.")
 
 
 def insert_foreign_data(cursor, df, column1, column2, table_name):
     """
     Inserts foreign key relationships from JSON data into a specified table.
-
+    ### Uses insert_data to insert foreign key relationships.
     :param cursor: Database cursor for executing queries.
     :param df: DataFrame containing the foreign key data.
     :param column1: The primary key column in the main table.
