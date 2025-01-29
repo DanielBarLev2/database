@@ -90,7 +90,22 @@ def create_database_schema(cursor):
                     PRIMARY KEY (movie_id, Keyword_id),
                     FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                     FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
-                    );"""
+                    );""",
+        "production_companies": """
+                CREATE TABLE IF NOT EXISTS Production_Companies (
+                    production_companies_id INT PRIMARY KEY,
+                    production_companies_name VARCHAR(100)
+                    )""",
+
+        "Movies_production_companies": """
+                    CREATE TABLE IF NOT EXISTS Movies_Production_Companies (
+                        movie_id INT,
+                        production_companies_id INT,
+                        PRIMARY KEY (movie_id, production_companies_id),
+                        FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+                        FOREIGN KEY (production_companies_id) REFERENCES Production_Companies(production_companies_id)
+                        );"""
+
         }
 
     for table, query in tables.items():
@@ -161,6 +176,17 @@ def load_data_to_database(cursor, connection):
 
     insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='keywords', table_name="Movies_Keywords")
 
+    production_companies_df = process_json_column(df=movies_data, column_name="production_companies")
+    # swaps name <-> id columns
+    production_companies_df = production_companies_df.iloc[:,
+                              [1, 0] + list(range(2, len(production_companies_df.columns)))]
+
+    production_companies_df.columns = get_table_columns(cursor=cursor, table_name="Production_Companies")
+    production_companies_df = production_companies_df.drop_duplicates(subset=['production_companies_name'])
+    insert_data(cursor=cursor, table_name="Production_Companies", df=production_companies_df)
+
+    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='production_companies', table_name="Movies_Production_Companies")
+
     connection.commit()
     print("All data loading completed!")
 
@@ -193,7 +219,7 @@ def main():
 
             cursor = connection.cursor()
 
-            drop_all_tables(cursor, connection)
+            # drop_all_tables(cursor, connection)
             create_database_schema(cursor)
             load_data_to_database(cursor, connection)
 
