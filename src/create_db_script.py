@@ -42,7 +42,6 @@ def create_database_schema(cursor):
     Creates the database schema by executing SQL queries to create tables.
 
     :param cursor: A database cursor object used to execute SQL queries.
-    :return: None
     """
     print("creating database schema...")
 
@@ -76,36 +75,47 @@ def create_database_schema(cursor):
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                 FOREIGN KEY (genre_id) REFERENCES Genres(genre_id)
                 );""",
-
         "Keywords": """
             CREATE TABLE IF NOT EXISTS Keywords (
                 keyword_id INT PRIMARY KEY,
                 keyword_name VARCHAR(100)
                 )""",
-
         "Movies_Keywords": """
-                CREATE TABLE IF NOT EXISTS Movies_Keywords (
-                    movie_id INT,
-                    Keyword_id INT,
-                    PRIMARY KEY (movie_id, Keyword_id),
-                    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
-                    FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
-                    );""",
-        "production_companies": """
-                CREATE TABLE IF NOT EXISTS Production_Companies (
-                    production_companies_id INT PRIMARY KEY,
-                    production_companies_name VARCHAR(100)
-                    )""",
-
-        "Movies_production_companies": """
-                    CREATE TABLE IF NOT EXISTS Movies_Production_Companies (
-                        movie_id INT,
-                        production_companies_id INT,
-                        PRIMARY KEY (movie_id, production_companies_id),
-                        FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
-                        FOREIGN KEY (production_companies_id) REFERENCES Production_Companies(production_companies_id)
-                        );"""
-
+            CREATE TABLE IF NOT EXISTS Movies_Keywords (
+                movie_id INT,
+                keyword_id INT,
+                PRIMARY KEY (movie_id, Keyword_id),
+                FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+                FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
+                );""",
+        "production_Companies": """
+            CREATE TABLE IF NOT EXISTS Production_Companies (
+                production_company_id INT PRIMARY KEY,
+                production_company_name VARCHAR(100)
+                );""",
+        "Movies_Production_Companies": """
+            CREATE TABLE IF NOT EXISTS Movies_Production_Companies (
+                movie_id INT,
+                production_company_id INT,
+                PRIMARY KEY (movie_id, production_company_id),
+                FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+                FOREIGN KEY (production_company_id) REFERENCES Production_Companies(production_company_id)
+                );""",
+        "Actors": """
+            CREATE TABLE IF NOT EXISTS Actors (
+                actor_id INT PRIMARY KEY,
+                name VARCHAR(64) NOT NULL UNIQUE,
+                gender INT CHECK (gender IN (0, 1, 2))
+                );""",
+        "Movies_Actors": """
+            CREATE TABLE IF NOT EXISTS Movies_Actors (
+                movie_id INT,
+                actor_id INT,
+                character_name VARCHAR(255),
+                PRIMARY KEY (movie_id, actor_id),
+                FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+                FOREIGN KEY (actor_id) REFERENCES Actors(actor_id)
+                );"""
         }
 
     for table, query in tables.items():
@@ -155,37 +165,44 @@ def load_data_to_database(cursor, connection):
 
     # load datasets
     movies_data = pd.read_csv(cfg.MOVIE_DATA_PATH)
-    _ = pd.read_csv(cfg.CREDITS_DATA_PATH)
+    credits_data = pd.read_csv(cfg.CREDITS_DATA_PATH)
 
     movies_df = movies_data.copy()
-    movies_df.rename(columns={'id': 'movie_id'}, inplace=True) # dataset and sql-table first column name mismatch.
-    movies_df = movies_df[get_table_columns(cursor=cursor, table_name="Movies")]
-    insert_data(cursor=cursor, table_name="Movies", df=movies_df)
+    movies_df.rename(columns={'id': 'movie_id'}, inplace=True)  # dataset and sql-table first column name mismatch.
+    movies_df = movies_df[get_table_columns(cursor, "Movies")]
+    insert_data(cursor, "Movies", movies_df)
 
-    genre_df = process_json_column(df=movies_data, column_name="genres")
-    genre_df.columns = get_table_columns(cursor=cursor, table_name="Genres")
+    genre_df = process_json_column(movies_data, "genres")
+    genre_df.columns = get_table_columns(cursor, "Genres")
     genre_df = genre_df.drop_duplicates(subset=['genre_name'])
-    insert_data(cursor=cursor, table_name="Genres", df=genre_df)
+    insert_data(cursor, "Genres", genre_df)
 
-    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='genres', table_name="Movies_Genres")
+    insert_foreign_data(cursor, movies_data, 'id', 'genres', "Movies_Genres")
 
-    keyword_df = process_json_column(df=movies_data, column_name="keywords")
-    keyword_df.columns = get_table_columns(cursor=cursor, table_name="Keywords")
+    keyword_df = process_json_column(movies_data, "keywords")
+    keyword_df.columns = get_table_columns(cursor, "Keywords")
     keyword_df = keyword_df.drop_duplicates(subset=['keyword_name'])
-    insert_data(cursor=cursor, table_name="Keywords", df=keyword_df)
+    insert_data(cursor, "Keywords", keyword_df)
 
-    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='keywords', table_name="Movies_Keywords")
+    insert_foreign_data(cursor, movies_data, 'id', 'keywords', "Movies_Keywords")
 
-    production_companies_df = process_json_column(df=movies_data, column_name="production_companies")
+    production_companies_df = process_json_column(movies_data, "production_companies")
     # swaps name <-> id columns
     production_companies_df = production_companies_df.iloc[:,
                               [1, 0] + list(range(2, len(production_companies_df.columns)))]
 
-    production_companies_df.columns = get_table_columns(cursor=cursor, table_name="Production_Companies")
-    production_companies_df = production_companies_df.drop_duplicates(subset=['production_companies_name'])
-    insert_data(cursor=cursor, table_name="Production_Companies", df=production_companies_df)
+    production_companies_df.columns = get_table_columns(cursor, "Production_Companies")
+    production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_name'])
+    insert_data(cursor, "Production_Companies", production_companies_df)
 
-    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='production_companies', table_name="Movies_Production_Companies")
+    insert_foreign_data(cursor, movies_data, 'id', 'production_companies', "Movies_Production_Companies")
+
+    actors_df = process_json_column(credits_data, "cast")
+    actors_df.rename(columns={'character': 'character_name', 'id': 'actor_id'}, inplace=True)
+    actors_df = actors_df[get_table_columns(cursor, "Actors")]
+    insert_data(cursor, "Actors", actors_df)
+
+    insert_foreign_data(cursor, credits_data, 'movie_id', 'cast', "Movies_Actors")
 
     connection.commit()
     print("All data loading completed!")
