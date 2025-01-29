@@ -1,12 +1,7 @@
 """Contains code responsible for creating the database"""
 
 import os
-import pandas as pd
-import mysql.connector
-from sshtunnel import SSHTunnelForwarder
-
 from config import config as cfg
-from utils.load_data_utils import get_table_columns, insert_data, process_json_column, insert_foreign_data
 
 
 def download_and_extract_dataset():
@@ -156,95 +151,3 @@ def drop_all_tables(cursor, connection):
         connection.rollback()
 
 
-def load_data_to_database(cursor, connection):
-    """
-        Load the dataset into the database.
-        This is only done if the tables are empty, since its initialize the database.
-    """
-    print("loading database schema... (this might take a while :|)")
-
-    # load datasets
-    movies_data = pd.read_csv(cfg.MOVIE_DATA_PATH)
-    credits_data = pd.read_csv(cfg.CREDITS_DATA_PATH)
-
-    movies_df = movies_data.copy()
-    movies_df.rename(columns={'id': 'movie_id'}, inplace=True)  # dataset and sql-table first column name mismatch.
-    movies_df = movies_df[get_table_columns(cursor, "Movies")]
-    insert_data(cursor, "Movies", movies_df)
-
-    genre_df = process_json_column(movies_data, "genres")
-    genre_df.columns = get_table_columns(cursor, "Genres")
-    genre_df = genre_df.drop_duplicates(subset=['genre_name'])
-    insert_data(cursor, "Genres", genre_df)
-
-    insert_foreign_data(cursor, movies_data, 'id', 'genres', "Movies_Genres")
-
-    keyword_df = process_json_column(movies_data, "keywords")
-    keyword_df.columns = get_table_columns(cursor, "Keywords")
-    keyword_df = keyword_df.drop_duplicates(subset=['keyword_name'])
-    insert_data(cursor, "Keywords", keyword_df)
-
-    insert_foreign_data(cursor, movies_data, 'id', 'keywords', "Movies_Keywords")
-
-    production_companies_df = process_json_column(movies_data, "production_companies")
-    # swaps name <-> id columns
-    production_companies_df = production_companies_df.iloc[:,
-                              [1, 0] + list(range(2, len(production_companies_df.columns)))]
-
-    production_companies_df.columns = get_table_columns(cursor, "Production_Companies")
-    production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_name'])
-    insert_data(cursor, "Production_Companies", production_companies_df)
-
-    insert_foreign_data(cursor, movies_data, 'id', 'production_companies', "Movies_Production_Companies")
-
-    actors_df = process_json_column(credits_data, "cast")
-    actors_df.rename(columns={'character': 'character_name', 'id': 'actor_id'}, inplace=True)
-    actors_df = actors_df[get_table_columns(cursor, "Actors")]
-    insert_data(cursor, "Actors", actors_df)
-
-    insert_foreign_data(cursor, credits_data, 'movie_id', 'cast', "Movies_Actors")
-
-    connection.commit()
-    print("All data loading completed!")
-
-
-def main():
-
-    download_and_extract_dataset()
-
-    print("establishing SSH tunnel...")
-    with SSHTunnelForwarder(
-            ssh_address_or_host=cfg.SSH_CONFIG['ssh_address_or_host'],
-            ssh_username=cfg.SSH_CONFIG['ssh_username'],
-            ssh_password=cfg.SSH_CONFIG['ssh_password'],
-            remote_bind_address=cfg.SSH_CONFIG['remote_bind_address'],
-            local_bind_address=cfg.SSH_CONFIG['local_bind_address']
-    ) as tunnel:
-
-        print(f"tunnel established: Local port {tunnel.local_bind_port}")
-
-        try:
-            print("connecting to MySQL server...")
-            connection = mysql.connector.connect(
-                host=cfg.DB_CONFIG['host'],
-                port=tunnel.local_bind_port,
-                user=cfg.DB_CONFIG['user'],
-                password=cfg.DB_CONFIG['password'],
-                database=cfg.DB_CONFIG['database'],
-                connection_timeout=60
-            )
-
-            cursor = connection.cursor()
-
-            # drop_all_tables(cursor, connection)
-            create_database_schema(cursor)
-            load_data_to_database(cursor, connection)
-
-
-        except mysql.connector.Error as err:
-            print(f"MySQL connection error: {err}")
-
-        finally:
-            if 'connection' in locals() and connection.is_connected():
-                connection.close()
-                print("MySQL connection closed")
