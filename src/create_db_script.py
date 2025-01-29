@@ -6,7 +6,7 @@ import mysql.connector
 from sshtunnel import SSHTunnelForwarder
 
 from config import config as cfg
-from utils.load_data_utils import get_table_columns, insert_data, process_json_column
+from utils.load_data_utils import get_table_columns, insert_data, process_json_column, insert_foreign_data
 
 
 def download_and_extract_dataset():
@@ -47,33 +47,51 @@ def create_database_schema(cursor):
     print("creating database schema...")
 
     tables = {
-        "movies":
+        "Movies":
         """ CREATE TABLE IF NOT EXISTS Movies (
-            movie_id INT PRIMARY KEY,
-            budget BIGINT,
-            original_language VARCHAR(10),
-            original_title VARCHAR(255),
-            overview VARCHAR(1023),
-            popularity FLOAT,
-            release_date DATE,
-            revenue BIGINT,
-            runtime INT,
-            status VARCHAR(15),
-            title VARCHAR(255),
-            vote_average FLOAT,
-            vote_count INT);""",
-        "genres": """
+                movie_id INT PRIMARY KEY,
+                budget BIGINT,
+                original_language VARCHAR(10),
+                original_title VARCHAR(255),
+                overview VARCHAR(1023),
+                popularity FLOAT,
+                release_date DATE,
+                revenue BIGINT,
+                runtime INT,
+                status VARCHAR(15),
+                title VARCHAR(255),
+                vote_average FLOAT,
+                vote_count INT
+                );""",
+        "Genres": """
             CREATE TABLE IF NOT EXISTS Genres (
                 genre_id INT PRIMARY KEY,
                 genre_name VARCHAR(100)
                 );""",
-        "movies_genres": """
-            CREATE TABLE IF NOT EXISTS Movie_Genres (
+        "Movies_Genres": """
+            CREATE TABLE IF NOT EXISTS Movies_Genres (
                 movie_id INT,
                 genre_id INT,
                 PRIMARY KEY (movie_id, genre_id),
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
-                FOREIGN KEY (genre_id) REFERENCES Genres(genre_id));"""}
+                FOREIGN KEY (genre_id) REFERENCES Genres(genre_id)
+                );""",
+
+        "Keywords": """
+            CREATE TABLE IF NOT EXISTS Keywords (
+                keyword_id INT PRIMARY KEY,
+                keyword_name VARCHAR(100)
+                )""",
+
+        "Movies_Keywords": """
+                CREATE TABLE IF NOT EXISTS Movies_Keywords (
+                    movie_id INT,
+                    Keyword_id INT,
+                    PRIMARY KEY (movie_id, Keyword_id),
+                    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
+                    FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
+                    );"""
+        }
 
     for table, query in tables.items():
         cursor.execute(query)
@@ -118,24 +136,34 @@ def load_data_to_database(cursor, connection):
         Load the dataset into the database.
         This is only done if the tables are empty, since its initialize the database.
     """
-    print("loading database schema...")
+    print("loading database schema... (this might take a while :|)")
 
     # load datasets
     movies_data = pd.read_csv(cfg.MOVIE_DATA_PATH)
-    credits_data = pd.read_csv(cfg.CREDITS_DATA_PATH)
+    _ = pd.read_csv(cfg.CREDITS_DATA_PATH)
 
     movies_df = movies_data.copy()
-    movies_df.rename(columns={'id': 'movie_id'}, inplace=True) # dataset and sql table first column name mismatch.
+    movies_df.rename(columns={'id': 'movie_id'}, inplace=True) # dataset and sql-table first column name mismatch.
     movies_df = movies_df[get_table_columns(cursor=cursor, table_name="Movies")]
-    insert_data(cursor=cursor, table_name="Movies", data=movies_df)
+    insert_data(cursor=cursor, table_name="Movies", df=movies_df)
 
     genre_df = process_json_column(df=movies_data, column_name="genres")
     genre_df.columns = get_table_columns(cursor=cursor, table_name="Genres")
     genre_df = genre_df.drop_duplicates(subset=['genre_name'])
-    insert_data(cursor=cursor, table_name="Genres", data=genre_df)
+    insert_data(cursor=cursor, table_name="Genres", df=genre_df)
+
+    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='genres', table_name="Movies_Genres")
+
+    keyword_df = process_json_column(df=movies_data, column_name="keywords")
+    keyword_df.columns = get_table_columns(cursor=cursor, table_name="Keywords")
+    keyword_df = keyword_df.drop_duplicates(subset=['keyword_name'])
+    insert_data(cursor=cursor, table_name="Keywords", df=keyword_df)
+
+    insert_foreign_data(cursor=cursor, df=movies_data, column1='id', column2='keywords', table_name="Movies_Keywords")
 
     connection.commit()
     print("All data loading completed!")
+
 
 def main():
 
@@ -160,12 +188,12 @@ def main():
                 user=cfg.DB_CONFIG['user'],
                 password=cfg.DB_CONFIG['password'],
                 database=cfg.DB_CONFIG['database'],
-                connection_timeout=10
+                connection_timeout=60
             )
 
             cursor = connection.cursor()
 
-            # drop_all_tables(cursor, connection)
+            drop_all_tables(cursor, connection)
             create_database_schema(cursor)
             load_data_to_database(cursor, connection)
 

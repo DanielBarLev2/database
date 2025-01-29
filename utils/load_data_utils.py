@@ -1,4 +1,6 @@
 import json
+
+import numpy as np
 import pandas as pd
 import mysql.connector
 
@@ -53,7 +55,7 @@ def table_exist(cursor, table_name):
     return False
 
 
-def insert_data(cursor, table_name, data):
+def insert_data(cursor, table_name, df):
     """
     Inserts data into a specified table.
     """
@@ -63,7 +65,7 @@ def insert_data(cursor, table_name, data):
 
     columns = get_table_columns(cursor, table_name)
 
-    data = handle_missing_values(data)
+    df = handle_missing_values(df)
 
     placeholders = ", ".join(["%s"] * len(columns))
     insert_row = f"""
@@ -71,7 +73,22 @@ def insert_data(cursor, table_name, data):
                 VALUES ({placeholders})
                 """
 
-    for _, row in data.iterrows():
-        cursor.execute(insert_row, tuple(row.values))
+    for _, row in df.head(100).iterrows():
+        cursor.execute(insert_row, tuple(row.astype(object).values))
 
     print(f"* {table_name} was populated.")
+
+
+def insert_foreign_data(cursor, df, column1, column2, table_name):
+    pairs = []
+    for _, row in df.iterrows():
+        id1 = row[column1]
+        json_row = json.loads(row[column2])
+        for vals in json_row:
+            id2 = vals['id']
+            pairs.append((id1, id2))
+
+    pairs = pd.DataFrame(pairs, columns=get_table_columns(cursor, table_name))
+
+    insert_data(cursor=cursor, table_name=table_name, df=pairs)
+
