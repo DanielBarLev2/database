@@ -48,8 +48,3 @@ def execute_query(connection, query_func, *args, max_width=32):
 
     except Exception as e:
         print(f"Error executing {query_func.__name__}: {e}")
-
-
-
-
-

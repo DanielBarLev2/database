@@ -1,5 +1,6 @@
 """ Includes functions for your DB queries (query NUM). """
 
+
 def query_1(connection, keyword):
     """
     Searches for movies by overview keyword and ranks results by relevance and popularity.

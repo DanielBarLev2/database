@@ -8,8 +8,17 @@ from src.api_data_retrieve import load_data_to_database
 from src.queries_db_script import query_1, query_2, query_3, query_4, query_5
 from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
-def main():
 
+def main():
+    """
+    This function serves as the central hub of the script, managing multiple critical tasks:
+    Downloading and extracting the dataset.
+    Establishing a secure SSH tunnel for port forwarding.
+    Connecting to a MySQL database.
+    Updating the database schema.
+    Populating the database.
+    Running various SQL queries.
+    """
     download_and_extract_dataset()
 
     print("establishing SSH tunnel...")
@@ -58,6 +67,7 @@ def main():
             if 'connection' in locals() and connection.is_connected():
                 connection.close()
                 print("MySQL connection closed")
+
 
 if __name__ == '__main__':
     main()

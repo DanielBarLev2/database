@@ -6,11 +6,13 @@ from config import config as cfg
 
 def download_and_extract_dataset():
     """
-    Creates a directory named /data and downloads and unzip the dataset from .kaggle.
+    Downloads and extracts a dataset from Kaggle using the Kaggle API. The location of
+    .kaggle.json configuration is set dynamically in the environment variable
+    `KAGGLE_CONFIG_DIR`. The dataset is downloaded and unzipped to the specified
+    download path. If the dataset already exists at the target location, the process
+    is skipped.
 
-    Expected files:
-        data/tmdb_5000_credits.csv
-        data/tmdb_5000_movies.csv
+    :return: None
     """
     # set the path to the directory containing .kaggle.json
     kaggle_config_path = os.path.join(os.getcwd(), ".kaggle")
@@ -42,21 +44,21 @@ def create_database_schema(cursor):
 
     tables = {
         "Movies":
-        """ CREATE TABLE IF NOT EXISTS Movies (
-                movie_id INT PRIMARY KEY,
-                budget BIGINT,
-                original_language VARCHAR(10),
-                original_title VARCHAR(255),
-                overview VARCHAR(2047),
-                popularity FLOAT,
-                release_date DATE,
-                revenue BIGINT,
-                runtime INT,
-                status VARCHAR(15),
-                title VARCHAR(255),
-                vote_average FLOAT,
-                vote_count INT
-                );""",
+            """ CREATE TABLE IF NOT EXISTS Movies (
+                    movie_id INT PRIMARY KEY,
+                    budget BIGINT,
+                    original_language VARCHAR(10),
+                    original_title VARCHAR(255),
+                    overview VARCHAR(2047),
+                    popularity FLOAT,
+                    release_date DATE,
+                    revenue BIGINT,
+                    runtime INT,
+                    status VARCHAR(15),
+                    title VARCHAR(255),
+                    vote_average FLOAT,
+                    vote_count INT
+                    );""",
         "Genres": """
             CREATE TABLE IF NOT EXISTS Genres (
                 genre_id INT PRIMARY KEY,
@@ -111,7 +113,7 @@ def create_database_schema(cursor):
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                 FOREIGN KEY (actor_id) REFERENCES Actors(actor_id)
                 );"""
-        }
+    }
 
     for table, query in tables.items():
         cursor.execute(query)
@@ -132,7 +134,7 @@ def create_database_schema(cursor):
 
 def drop_all_tables(cursor, connection):
     """
-        Drops all tables in the current database.
+    Drops all tables in the current database.
     """
     print("deleting database schema...")
     try:
@@ -159,5 +161,3 @@ def drop_all_tables(cursor, connection):
     except Exception as e:
         print(f"Error while dropping tables: {e}")
         connection.rollback()
-
-

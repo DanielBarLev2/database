@@ -4,11 +4,20 @@ import pandas as pd
 from tqdm import tqdm
 from config import config as cfg
 
+
 def load_data_to_database(cursor, connection):
     """
+    Loads and processes data into a database by reading datasets, transforming them into appropriate
+    formats, and inserting the data into related database tables.
 
-    :param cursor:  Database cursor for executing queries.
-    :param connection: Database Connection for commiting queries.
+    The function handles various entities such as Movies, Genres, Keywords, Production Companies, and
+    Actors. It processes the relationships between these entities, ensuring proper linkage within the
+    database. The function utilizes helper methods for specific tasks like column processing, data
+    insertion, and relationship management. Upon completion, the changes are committed to the database.
+
+    :param cursor: Database cursor object used to execute SQL commands.
+    :param connection: Database connection object to commit changes or rollback in case of failures.
+    :return: None
     """
     print("loading database schema... (this might take a while :|)")
 
@@ -44,7 +53,8 @@ def load_data_to_database(cursor, connection):
     production_companies_df = process_json_column(movies_data, "production_companies")
 
     production_companies_df = production_companies_df.iloc[:,
-                              [1, 0] + list(range(2, len(production_companies_df.columns)))] # swaps name <-> id columns
+                              [1, 0] + list(
+                                  range(2, len(production_companies_df.columns)))]  # swaps name <-> id columns
     production_companies_df.columns = get_table_columns(cursor, "Production_Companies")
     production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_id'])
     insert_data(cursor, "Production_Companies", production_companies_df, connection)
@@ -75,7 +85,7 @@ def insert_data(cursor, table_name, df, connection):
     """
    Inserts data into a specified table if it is not already populated.
 
-   :param connection:
+   :param connection: connection to database.
    :param cursor: Database cursor for executing queries.
    :param table_name: Name of the table.
    :param df: DataFrame containing data to insert.
@@ -112,7 +122,7 @@ def insert_foreign_data(cursor, df, column1, column2, table_name, connection):
     """
     Inserts foreign key relationships from JSON data into a specified table.
     ### Uses insert_data to insert foreign key relationships.
-    :param connection:
+    :param connection: connection to database.
     :param cursor: Database cursor for executing queries.
     :param df: DataFrame containing the foreign key data.
     :param column1: The primary key column in the main table.
