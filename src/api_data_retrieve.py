@@ -1,8 +1,8 @@
 # Handles data insertion.
 import json
 import pandas as pd
-from config import config as cfg
 from tqdm import tqdm
+from config import config as cfg
 
 def load_data_to_database(cursor, connection):
     """
@@ -132,7 +132,6 @@ def insert_foreign_data(cursor, df, column1, column2, table_name, connection):
     # edge case: Movies_Actors has 3 attributes
     if table_name == "Movies_Actors":
         pairs['character_name'] = process_json_column(df, "cast")['character']
-        pairs = pairs.drop_duplicates(subset=['actor_id'])
 
     insert_data(cursor=cursor, table_name=table_name, df=pairs, connection=connection)
 
