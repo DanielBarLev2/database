@@ -47,7 +47,7 @@ def create_database_schema(cursor):
                 budget BIGINT,
                 original_language VARCHAR(10),
                 original_title VARCHAR(255),
-                overview VARCHAR(1023),
+                overview VARCHAR(2047),
                 popularity FLOAT,
                 release_date DATE,
                 revenue BIGINT,
@@ -60,7 +60,7 @@ def create_database_schema(cursor):
         "Genres": """
             CREATE TABLE IF NOT EXISTS Genres (
                 genre_id INT PRIMARY KEY,
-                genre_name VARCHAR(100)
+                genre_name VARCHAR(128)
                 );""",
         "Movies_Genres": """ 
             CREATE TABLE IF NOT EXISTS Movies_Genres (
@@ -73,7 +73,7 @@ def create_database_schema(cursor):
         "Keywords": """
             CREATE TABLE IF NOT EXISTS Keywords (
                 keyword_id INT PRIMARY KEY,
-                keyword_name VARCHAR(100)
+                keyword_name VARCHAR(128)
                 )""",
         "Movies_Keywords": """
             CREATE TABLE IF NOT EXISTS Movies_Keywords (
@@ -86,7 +86,7 @@ def create_database_schema(cursor):
         "production_Companies": """
             CREATE TABLE IF NOT EXISTS Production_Companies (
                 production_company_id INT PRIMARY KEY,
-                production_company_name VARCHAR(100)
+                production_company_name VARCHAR(128)
                 );""",
         "Movies_Production_Companies": """
             CREATE TABLE IF NOT EXISTS Movies_Production_Companies (
@@ -99,15 +99,15 @@ def create_database_schema(cursor):
         "Actors": """
             CREATE TABLE IF NOT EXISTS Actors (
                 actor_id INT PRIMARY KEY,
-                name VARCHAR(64) NOT NULL,
+                name VARCHAR(128) NOT NULL,
                 gender INT CHECK (gender IN (0, 1, 2))
                 );""",
         "Movies_Actors": """
             CREATE TABLE IF NOT EXISTS Movies_Actors (
                 movie_id INT,
                 actor_id INT,
-                character_name VARCHAR(255),
-                PRIMARY KEY (movie_id, actor_id),
+                character_name VARCHAR(512),
+                PRIMARY KEY (movie_id, actor_id, character_name),
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                 FOREIGN KEY (actor_id) REFERENCES Actors(actor_id)
                 );"""
@@ -116,6 +116,16 @@ def create_database_schema(cursor):
     for table, query in tables.items():
         cursor.execute(query)
         print(f"+ {table} table was created")
+
+    try:
+        cursor.execute("ALTER TABLE Movies ADD FULLTEXT(overview);")
+        print("+ FULLTEXT index added to Movies.overview")
+
+        cursor.execute("ALTER TABLE Actors ADD FULLTEXT(name);")
+        print("+ FULLTEXT index added to Actors.name")
+
+    except Exception as e:
+        print(f"Error adding FULLTEXT indexes: {e}")
 
     print("database schema created successfully.")
 
