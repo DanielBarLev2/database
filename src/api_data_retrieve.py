@@ -2,7 +2,7 @@
 import json
 import pandas as pd
 from config import config as cfg
-
+from tqdm import tqdm
 
 def load_data_to_database(cursor, connection):
     """
@@ -20,25 +20,25 @@ def load_data_to_database(cursor, connection):
     movies_df = movies_data.copy()
     movies_df.rename(columns={'id': 'movie_id'}, inplace=True)  # dataset and sql-table first column name mismatch.
     movies_df = movies_df[get_table_columns(cursor, "Movies")]
-    insert_data(cursor, "Movies", movies_df)
+    insert_data(cursor, "Movies", movies_df, connection)
 
     # Process and insert Genres data
     genre_df = process_json_column(movies_data, "genres")
     genre_df.columns = get_table_columns(cursor, "Genres")
-    genre_df = genre_df.drop_duplicates(subset=['genre_name'])
-    insert_data(cursor, "Genres", genre_df)
+    genre_df = genre_df.drop_duplicates(subset=['genre_id'])
+    insert_data(cursor, "Genres", genre_df, connection)
 
     # Insert movie-genre relationships
-    insert_foreign_data(cursor, movies_data, 'id', 'genres', "Movies_Genres")
+    insert_foreign_data(cursor, movies_data, 'id', 'genres', "Movies_Genres", connection)
 
     # Process and insert Keywords data
     keyword_df = process_json_column(movies_data, "keywords")
     keyword_df.columns = get_table_columns(cursor, "Keywords")
-    keyword_df = keyword_df.drop_duplicates(subset=['keyword_name'])
-    insert_data(cursor, "Keywords", keyword_df)
+    keyword_df = keyword_df.drop_duplicates(subset=['keyword_id'])
+    insert_data(cursor, "Keywords", keyword_df, connection)
 
     # Insert movie-keyword relationships
-    insert_foreign_data(cursor, movies_data, 'id', 'keywords', "Movies_Keywords")
+    insert_foreign_data(cursor, movies_data, 'id', 'keywords', "Movies_Keywords", connection)
 
     # Insert production-companies relationships
     production_companies_df = process_json_column(movies_data, "production_companies")
@@ -46,39 +46,43 @@ def load_data_to_database(cursor, connection):
     production_companies_df = production_companies_df.iloc[:,
                               [1, 0] + list(range(2, len(production_companies_df.columns)))] # swaps name <-> id columns
     production_companies_df.columns = get_table_columns(cursor, "Production_Companies")
-    production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_name'])
-    insert_data(cursor, "Production_Companies", production_companies_df)
+    production_companies_df = production_companies_df.drop_duplicates(subset=['production_company_id'])
+    insert_data(cursor, "Production_Companies", production_companies_df, connection)
 
     # Insert movie-production-company relationships
     insert_foreign_data(cursor=cursor,
                         df=movies_data,
                         column1='id',
                         column2='production_companies',
-                        table_name="Movies_Production_Companies")
+                        table_name="Movies_Production_Companies",
+                        connection=connection)
 
     # Process and insert Actors data
     actors_df = process_json_column(credits_data, "cast")
     actors_df.rename(columns={'character': 'character_name', 'id': 'actor_id'}, inplace=True)
     actors_df = actors_df[get_table_columns(cursor, "Actors")]
-    insert_data(cursor, "Actors", actors_df)
+    actors_df = actors_df.drop_duplicates(subset=['actor_id'])
+    insert_data(cursor, "Actors", actors_df, connection)
 
     # Insert movie-actor relationships
-    insert_foreign_data(cursor, credits_data, 'movie_id', 'cast', "Movies_Actors")
+    insert_foreign_data(cursor, credits_data, 'movie_id', 'cast', "Movies_Actors", connection)
 
-
+    connection.commit()
     print("All data loading completed!")
 
 
-def insert_data(cursor, table_name, df):
+def insert_data(cursor, table_name, df, connection):
     """
    Inserts data into a specified table if it is not already populated.
 
+   :param connection:
    :param cursor: Database cursor for executing queries.
    :param table_name: Name of the table.
    :param df: DataFrame containing data to insert.
    """
     if table_exist(cursor=cursor, table_name=table_name):
         print(f"% {table_name} was already populated.")
+
         return
 
     columns = get_table_columns(cursor, table_name)
@@ -91,18 +95,24 @@ def insert_data(cursor, table_name, df):
                 VALUES ({placeholders})
                 """
 
-    for _, row in df.iterrows():
+    # Wrap the DataFrame in tqdm for a progress bar
+    for index, row in tqdm(df.iterrows(), total=len(df), desc=f"Inserting into {table_name}"):
         try:
             cursor.execute(insert_row, tuple(row.astype(object).values))
         except Exception as e:
-            print(e)
+            print(f"\nError inserting row {index} into {table_name}: {e}")
+            print(f"Query: {insert_row}")
+            print(f"Row values: {tuple(row.astype(object).values)}")
+
+    connection.commit()
     print(f"* {table_name} was populated.")
 
 
-def insert_foreign_data(cursor, df, column1, column2, table_name):
+def insert_foreign_data(cursor, df, column1, column2, table_name, connection):
     """
     Inserts foreign key relationships from JSON data into a specified table.
     ### Uses insert_data to insert foreign key relationships.
+    :param connection:
     :param cursor: Database cursor for executing queries.
     :param df: DataFrame containing the foreign key data.
     :param column1: The primary key column in the main table.
@@ -122,8 +132,9 @@ def insert_foreign_data(cursor, df, column1, column2, table_name):
     # edge case: Movies_Actors has 3 attributes
     if table_name == "Movies_Actors":
         pairs['character_name'] = process_json_column(df, "cast")['character']
+        pairs = pairs.drop_duplicates(subset=['actor_id'])
 
-    insert_data(cursor=cursor, table_name=table_name, df=pairs)
+    insert_data(cursor=cursor, table_name=table_name, df=pairs, connection=connection)
 
 
 def get_table_columns(cursor, table_name):

@@ -34,12 +34,13 @@ def main():
 
             cursor = connection.cursor()
 
-            inp = input("drop all tables? (y/n)")
-            if inp.lower() == "y":
-                drop_all_tables(cursor, connection)
+            # inp = input("drop all tables? (yes)")
+            # if inp.lower() == "yes":
+            #     drop_all_tables(cursor, connection)
 
             create_database_schema(cursor)
             load_data_to_database(cursor, connection)
+            connection.commit()
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")

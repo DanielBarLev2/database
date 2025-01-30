@@ -62,7 +62,7 @@ def create_database_schema(cursor):
                 genre_id INT PRIMARY KEY,
                 genre_name VARCHAR(100)
                 );""",
-        "Movies_Genres": """
+        "Movies_Genres": """ 
             CREATE TABLE IF NOT EXISTS Movies_Genres (
                 movie_id INT,
                 genre_id INT,
@@ -99,7 +99,7 @@ def create_database_schema(cursor):
         "Actors": """
             CREATE TABLE IF NOT EXISTS Actors (
                 actor_id INT PRIMARY KEY,
-                name VARCHAR(64) NOT NULL UNIQUE,
+                name VARCHAR(64) NOT NULL,
                 gender INT CHECK (gender IN (0, 1, 2))
                 );""",
         "Movies_Actors": """
