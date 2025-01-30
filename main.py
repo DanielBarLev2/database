@@ -1,10 +1,12 @@
 import mysql
 import mysql.connector
-from sshtunnel import SSHTunnelForwarder
-from config import config as cfg
-from src.api_data_retrieve import load_data_to_database
-from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
+from config import config as cfg
+from sshtunnel import SSHTunnelForwarder
+from src.queries_execution import execute_query
+from src.api_data_retrieve import load_data_to_database
+from src.queries_db_script import query_1, query_2, query_3, query_4, query_5
+from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
 def main():
 
@@ -40,7 +42,14 @@ def main():
 
             create_database_schema(cursor)
             load_data_to_database(cursor, connection)
-            connection.commit()
+            try:
+                execute_query(connection, query_1, "action")
+                execute_query(connection, query_2, "Robert Downey Jr.")
+                execute_query(connection, query_3, "Comedy")
+                execute_query(connection, query_4, "Drama")
+                execute_query(connection, query_5)
+            except mysql.connector.Error as error:
+                print("Failed to execute query: {}".format(error))
 
         except mysql.connector.Error as err:
             print(f"MySQL connection error: {err}")

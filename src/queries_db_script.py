@@ -1,9 +1,8 @@
-""" Includes functions for your DB queries (query NUM ). """
-
+""" Includes functions for your DB queries (query NUM). """
 
 def query_1(connection, keyword):
     """
-    searches for movies by overview keyword and also ranks results by relevance and popularity
+    Searches for movies by overview keyword and ranks results by relevance and popularity.
     """
     query = """
             SELECT movie_id, title, overview, popularity, 
@@ -15,27 +14,35 @@ def query_1(connection, keyword):
         """
     cursor = connection.cursor()
     cursor.execute(query, (keyword, keyword))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+    cursor.close()
+    return results, column_names
 
-def query_2(conn, keyword):
+
+def query_2(connection, keyword):
     """
-    finds actors by name and counts how many movies they appeared in.
+    Finds actors by name and counts how many movies they appeared in.
     """
     query = """
             SELECT a.actor_id, a.name, COUNT(ma.movie_id) AS movie_count
             FROM Actors a
             JOIN Movies_Actors ma ON a.actor_id = ma.actor_id
-            WHERE MATCH(a.name) AGAINST (%s IN NATURAL LANGUAGE MODE)
+            WHERE a.name = %s
             GROUP BY a.actor_id, a.name
             ORDER BY movie_count DESC;
             """
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     cursor.execute(query, (keyword,))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+    cursor.close()
+    return results, column_names
 
-def query_3(conn, genre):
+
+def query_3(connection, genre):
     """
-    finds the top 5 most profitable movies in a genre and compares them to the genre's
+    Finds the top 5 most profitable movies in a genre and compares them to the genre's average profit.
     """
     query = """
             SELECT m.movie_id, m.title, (m.revenue - m.budget) AS profit,
@@ -51,13 +58,17 @@ def query_3(conn, genre):
             ORDER BY profit DESC
             LIMIT 5;
             """
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     cursor.execute(query, (genre, genre))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+    cursor.close()
+    return results, column_names
 
-def query_4(conn, genre):
+
+def query_4(connection, genre):
     """
-    finds actors who appeared in movies with a vote average above the genre's average.
+    Finds 10 actors who appeared in movies with a vote average above the genre's average.
     """
     query = """
             SELECT DISTINCT a.actor_id, a.name, COUNT(m.movie_id) AS high_rated_movies
@@ -74,13 +85,17 @@ def query_4(conn, genre):
             ORDER BY high_rated_movies DESC
             LIMIT 10;
             """
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     cursor.execute(query, (genre,))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+    cursor.close()
+    return results, column_names
 
-def query_5(conn):
+
+def query_5(connection):
     """
-    finds the top production companies by movie count and their total revenue.
+    Finds the top 5 production companies by movie count and their total revenue.
     """
     query = """
             SELECT pc.production_company_name, 
@@ -95,7 +110,9 @@ def query_5(conn):
             ORDER BY total_revenue DESC, avg_revenue_per_movie DESC
             LIMIT 5;
             """
-    cursor = conn.cursor()
+    cursor = connection.cursor()
     cursor.execute(query)
-    return cursor.fetchall()
-
+    results = cursor.fetchall()
+    column_names = [desc[0] for desc in cursor.description]
+    cursor.close()
+    return results, column_names
