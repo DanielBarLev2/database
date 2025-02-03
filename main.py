@@ -25,7 +25,8 @@ def main():
     with SSHTunnelForwarder(
             ssh_address_or_host=cfg.SSH_CONFIG['ssh_address_or_host'],
             ssh_username=cfg.SSH_CONFIG['ssh_username'],
-            ssh_password=cfg.SSH_CONFIG['ssh_password'],
+            # ssh_password=cfg.SSH_CONFIG['ssh_password'],
+            ssh_pkey=cfg.SSH_CONFIG['ssh_pkey'],  # Use OpenSSH key
             remote_bind_address=cfg.SSH_CONFIG['remote_bind_address'],
             local_bind_address=cfg.SSH_CONFIG['local_bind_address']
     ) as tunnel:
@@ -43,7 +44,7 @@ def main():
                 connection_timeout=60
             )
 
-            cursor = connection.cursor()
+            cursor = connection.cursor(prepared=True)   # Create a prepared statement cursor
 
             # inp = input("drop all tables? (yes)")
             # if inp.lower() == "yes":

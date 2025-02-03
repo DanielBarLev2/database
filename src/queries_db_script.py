@@ -13,8 +13,8 @@ def query_1(connection, keyword):
             ORDER BY relevance DESC, popularity DESC
             LIMIT 10;
         """
-    cursor = connection.cursor()
-    cursor.execute(query, (keyword, keyword))
+    cursor = connection.cursor(prepared=True)     # will prepare the statement once
+    cursor.execute(query, (keyword, keyword))     # execute using prepared statement
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
     cursor.close()
@@ -33,7 +33,7 @@ def query_2(connection, keyword):
             GROUP BY a.actor_id, a.name
             ORDER BY movie_count DESC;
             """
-    cursor = connection.cursor()
+    cursor = connection.cursor(prepared=True)
     cursor.execute(query, (keyword,))
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
@@ -59,7 +59,7 @@ def query_3(connection, genre):
             ORDER BY profit DESC
             LIMIT 5;
             """
-    cursor = connection.cursor()
+    cursor = connection.cursor(prepared=True)
     cursor.execute(query, (genre, genre))
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
@@ -86,7 +86,7 @@ def query_4(connection, genre):
             ORDER BY high_rated_movies DESC
             LIMIT 10;
             """
-    cursor = connection.cursor()
+    cursor = connection.cursor(prepared=True)
     cursor.execute(query, (genre,))
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
@@ -111,7 +111,7 @@ def query_5(connection):
             ORDER BY total_revenue DESC, avg_revenue_per_movie DESC
             LIMIT 5;
             """
-    cursor = connection.cursor()
+    cursor = connection.cursor(prepared=True)
     cursor.execute(query)
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
