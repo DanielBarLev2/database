@@ -46,12 +46,11 @@ def query_3(connection, genre):
     Finds the top 5 most profitable movies in a genre and compares them to the genre's average profit.
     """
     query = """
-            SELECT m.movie_id, m.title, (m.revenue - m.budget) AS profit,
-                   (SELECT AVG(m2.revenue - m2.budget) 
-                    FROM Movies m2
-                    JOIN Movies_Genres mg2 ON m2.movie_id = mg2.movie_id
-                    JOIN Genres g2 ON mg2.genre_id = g2.genre_id
-                    WHERE g2.genre_name = %s) AS avg_profit
+            SELECT 
+                m.movie_id, 
+                m.title, 
+                (m.revenue - m.budget) AS profit,
+                AVG(m.revenue - m.budget) OVER (PARTITION BY g.genre_name) AS avg_profit
             FROM Movies m
             JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
             JOIN Genres g ON mg.genre_id = g.genre_id
@@ -60,7 +59,7 @@ def query_3(connection, genre):
             LIMIT 5;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query, (genre, genre))
+    cursor.execute(query, (genre,))
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
     cursor.close()
