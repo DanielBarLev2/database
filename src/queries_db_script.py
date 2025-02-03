@@ -1,20 +1,25 @@
 """ Includes functions for your DB queries (query NUM). """
 
 
-def query_1(connection, keyword):
+def query_1(connection, keyword, limit=10):
     """
     Searches for movies by overview keyword and ranks results by relevance and popularity.
     """
+    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+        limit = 10
     query = """
-            SELECT movie_id, title, overview, popularity, 
-                   MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE) AS relevance
-            FROM Movies 
-            WHERE MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE)
-            ORDER BY relevance DESC, popularity DESC
-            LIMIT 10;
-        """
+            SELECT movie_id, title, overview, popularity, relevance
+            FROM (
+                SELECT movie_id, title, overview, popularity, 
+                       MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE) AS relevance
+                FROM Movies
+            ) AS subquery
+            WHERE relevance > 0
+            ORDER BY relevance DESC, popularity DESC    -- break ties by movie popularity
+            LIMIT ?;
+            """
     cursor = connection.cursor(prepared=True)     # will prepare the statement once
-    cursor.execute(query, (keyword, keyword))     # execute using prepared statement
+    cursor.execute(query, (keyword, limit))     # execute using prepared statement
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
     cursor.close()
@@ -23,13 +28,14 @@ def query_1(connection, keyword):
 
 def query_2(connection, keyword):
     """
-    Finds actors by name and counts how many movies they appeared in.
+    Finds actors with the same name (e.g. last or first) and counts how many movies they appeared in.
+    Use Case: identifying acting dynasties (e.g., Coppola, Skarsgård)
     """
     query = """
             SELECT a.actor_id, a.name, COUNT(ma.movie_id) AS movie_count
             FROM Actors a
             JOIN Movies_Actors ma ON a.actor_id = ma.actor_id
-            WHERE a.name = %s
+            WHERE MATCH(a.name) AGAINST (%s IN NATURAL LANGUAGE MODE)
             GROUP BY a.actor_id, a.name
             ORDER BY movie_count DESC;
             """

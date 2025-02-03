@@ -50,11 +50,11 @@ def main():
             # if inp.lower() == "yes":
             #     drop_all_tables(cursor, connection)
 
-            create_database_schema(cursor)
-            load_data_to_database(cursor, connection)
+            # create_database_schema(cursor)
+            # load_data_to_database(cursor, connection)
             try:
-                execute_query(connection, query_1, "action")
-                execute_query(connection, query_2, "Robert Downey Jr.")
+                execute_query(connection, query_1, "future galaxy")
+                execute_query(connection, query_2, "Skarsgard")
                 execute_query(connection, query_3, "Comedy")
                 execute_query(connection, query_4, "Drama")
                 execute_query(connection, query_5)
