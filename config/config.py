@@ -2,7 +2,7 @@ import os
 
 
 DATASET_NAME = "tmdb/tmdb-movie-metadata"
-DOWNLOAD_PATH = os.path.join(os.getcwd(), "data")
+DOWNLOAD_PATH = os.path.join(os.path.abspath(os.path.join(os.getcwd(), os.pardir)), "data")
 
 MOVIE_DATA_PATH = os.path.join(DOWNLOAD_PATH, "tmdb_5000_movies.csv")
 CREDITS_DATA_PATH = os.path.join(DOWNLOAD_PATH, "tmdb_5000_credits.csv")

@@ -80,7 +80,8 @@ def main():
             connection_timeout=60
         )
 
-        cursor = connection.cursor(prepared=True)   # Create a MySQLCursorPrepared cursor to enable prepared statements
+        # cursor = connection.cursor(prepared=True)   # for insert_data_row_by_row: Create a MySQLCursorPrepared cursor to enable prepared statements for batch inserts
+        # cursor = connection.cursor()
 
         # inp = input("drop all tables? (yes)")
         # if inp.lower() == "yes":
@@ -88,6 +89,8 @@ def main():
 
         # create_database_schema(cursor)
         # load_data_to_database(cursor, connection)
+
+        # cursor.close()
 
         try:
             execute_query(connection, query_1, "future galaxy")

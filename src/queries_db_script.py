@@ -5,7 +5,7 @@ def query_1(connection, keyword, limit=10):
     """
     Searches for movies by overview keyword and ranks results by relevance and popularity.
     """
-    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+    if not isinstance(limit, int) or limit <= 0 or limit > 10000:  # Validate limit input
         limit = 10
     query = """
             SELECT movie_id, title, overview, popularity, relevance
@@ -16,9 +16,9 @@ def query_1(connection, keyword, limit=10):
             ) AS subquery
             WHERE relevance > 0
             ORDER BY relevance DESC, popularity DESC    -- break ties by movie popularity
-            LIMIT ?;
+            LIMIT %s;
             """
-    cursor = connection.cursor(prepared=True)     # will prepare the statement once
+    cursor = connection.cursor()
     try:
         cursor.execute(query, (keyword, limit))     # execute using prepared statement
         results = cursor.fetchall()
@@ -44,7 +44,7 @@ def query_2(connection, keyword):
             GROUP BY a.actor_id, a.name
             ORDER BY movie_count DESC;
             """
-    cursor = connection.cursor(prepared=True)
+    cursor = connection.cursor()
     try:
         cursor.execute(query, (keyword,))
         results = cursor.fetchall()
@@ -74,7 +74,7 @@ def query_3(connection, genre):
             ORDER BY profit DESC
             LIMIT 5;
             """
-    cursor = connection.cursor(prepared=True)
+    cursor = connection.cursor()
     try:
         cursor.execute(query, (genre,))
         results = cursor.fetchall()
@@ -117,7 +117,7 @@ def query_4(connection, genre):
             ORDER BY high_rated_movies DESC
             LIMIT 10;
             """
-    cursor = connection.cursor(prepared=True)
+    cursor = connection.cursor()
     try:
         cursor.execute(query, (genre, genre))
         results = cursor.fetchall()
@@ -147,7 +147,7 @@ def query_5(connection):
             ORDER BY total_revenue DESC, avg_revenue_per_movie DESC
             LIMIT 5;
             """
-    cursor = connection.cursor(prepared=True)
+    cursor = connection.cursor()
     try:
         cursor.execute(query)
         results = cursor.fetchall()
@@ -165,7 +165,7 @@ def query_6(connection, movie_title, limit=10):
     Suggests movies related to the given title based on shared keywords, ranked by popularity.
     If several movies with given title exist, chooses the most popular.
     """
-    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+    if not isinstance(limit, int) or limit <= 0 or limit > 10000:  # Validate limit input
         limit = 10
     query = """
             WITH MovieID AS (
@@ -187,16 +187,15 @@ def query_6(connection, movie_title, limit=10):
             WHERE mk.movie_id NOT IN (SELECT movie_id FROM MovieID)
             GROUP BY m.movie_id, m.title, m.popularity
             ORDER BY shared_keywords DESC, m.popularity DESC
-            LIMIT ?;
+            LIMIT %s;
             """
-    cursor = connection.cursor(prepared=True)
+    cursor = connection.cursor()
     try:
         cursor.execute(query, (movie_title, limit))
         results = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
         if not results:
             print(f"No recommendations found for '{movie_title}'.")
-
     except Exception as e:
         print(f"Error executing query_6: {e}")
         return [], []

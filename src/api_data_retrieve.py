@@ -81,7 +81,7 @@ def load_data_to_database(cursor, connection):
     print("All data loading completed!")
 
 
-def insert_data(cursor, table_name, df, connection):
+def insert_data_row_by_row(cursor, table_name, df, connection):
     """
    Inserts data into a specified table if it is not already populated.
 
@@ -92,7 +92,6 @@ def insert_data(cursor, table_name, df, connection):
    """
     if table_exist(cursor=cursor, table_name=table_name):
         print(f"% {table_name} was already populated.")
-
         return
 
     columns = get_table_columns(cursor, table_name)
@@ -115,6 +114,50 @@ def insert_data(cursor, table_name, df, connection):
             print(f"Row values: {tuple(row.astype(object).values)}")
 
     connection.commit()
+    print(f"* {table_name} was populated.")
+
+
+
+def insert_data(cursor, table_name, df, connection, batch_size=10000):
+    """
+    Inserts data into a specified table in batches if it is not already populated.
+
+    :param connection: connection to database.
+    :param cursor: Database cursor for executing queries.
+    :param table_name: Name of the table.
+    :param df: DataFrame containing data to insert.
+    :param batch_size: Number of rows per batch insert (default: 10,000).
+    """
+    if table_exist(cursor=cursor, table_name=table_name):
+        print(f"% {table_name} was already populated.")
+        return
+
+    columns = get_table_columns(cursor, table_name)
+
+    df = handle_missing_values(df)
+
+    placeholders = ", ".join(["%s"] * len(columns))
+    insert_row = f"""
+                INSERT INTO {table_name} ({', '.join(columns)}) 
+                VALUES ({placeholders})
+                """
+
+    # Convert DataFrame to list of lists for batch processing
+    data_list = df.astype(object).values.tolist()
+    total_rows = len(data_list)
+
+    # Insert in batches with tqdm progress tracking
+    for i in tqdm(range(0, total_rows, batch_size), desc=f"Inserting into {table_name}", unit="batch"):
+        batch = data_list[i : i + batch_size]  # Extract chunk
+        try:
+            cursor.executemany(insert_row, batch)  # Execute batch insert
+            connection.commit()  # Commit after successful batch insert
+        except Exception as e:
+            connection.rollback()  # Rollback to prevent partial inserts
+            print(f"\nError inserting batch {i // batch_size + 1} into {table_name}: {e}")
+            # print(f"Query: {insert_row}")
+            # print(f"Sample Row values: {batch[0] if batch else 'No data'}")  # Print first row of batch for debugging
+
     print(f"* {table_name} was populated.")
 
 
@@ -172,10 +215,10 @@ def handle_missing_values(data):
             data[column] = data[column].where(data[column].notnull(), None)
 
         elif data[column].dtype == 'object':
-            data[column].fillna('', inplace=True)
+            data[column] = data[column].fillna('')
 
         else:
-            data[column].fillna(0, inplace=True)
+            data[column] = data[column].fillna(0)
 
     return data
 
@@ -213,3 +256,4 @@ def table_exist(cursor, table_name):
     if row_count > 0:
         return True
     return False
+
