@@ -81,7 +81,7 @@ def create_database_schema(cursor):
             CREATE TABLE IF NOT EXISTS Movies_Keywords (
                 movie_id INT,
                 keyword_id INT,
-                PRIMARY KEY (movie_id, Keyword_id),
+                PRIMARY KEY (movie_id, keyword_id),
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                 FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
                 );""",
@@ -128,6 +128,31 @@ def create_database_schema(cursor):
 
     except Exception as e:
         print(f"Error adding FULLTEXT indexes: {e}")
+
+    try:
+        cursor.execute("CREATE INDEX idx_movies_popularity ON Movies(popularity);")
+        print("+ B-tree index added to Movies.popularity")
+
+        cursor.execute("CREATE INDEX idx_movies_actors_actor_id ON Movies_Actors(actor_id);")
+        print("+ B-tree index added to Movies_Actors.actor_id")
+
+        cursor.execute("CREATE INDEX idx_movies_revenue_budget ON Movies(revenue, budget);")
+        print("+ B-tree composite index added to Movies(revenue, budget)")
+
+        cursor.execute("CREATE INDEX idx_genres_genre_name ON Genres(genre_name);")
+        print("+ B-tree index added to Genres.genre_name")
+
+        cursor.execute("CREATE INDEX idx_movies_genres_genre_id ON Movies_Genres(genre_id);")
+        print("+ B-tree index added to Movies_Genres.genre_id")
+
+        cursor.execute("CREATE INDEX idx_movies_vote_average ON Movies(vote_average);")
+        print("+ B-tree index added to Movies.vote_average")
+
+        cursor.execute("CREATE INDEX idx_movies_production_companies_pcompany_id ON Movies_Production_Companies(production_company_id);")
+        print("+ B-tree index added to Movies_Production_Companies.production_company_id")
+
+    except Exception as e:
+        print(f"Error adding B-tree indexes: {e}")
 
     print("database schema created successfully.")
 
