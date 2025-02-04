@@ -15,7 +15,7 @@ def download_and_extract_dataset():
     :return: None
     """
     # set the path to the directory containing .kaggle.json
-    kaggle_config_path = os.path.join(os.getcwd(), ".kaggle")
+    kaggle_config_path = os.path.join(os.path.abspath(os.path.join(os.getcwd(), os.pardir)), ".kaggle")
     os.environ["KAGGLE_CONFIG_DIR"] = kaggle_config_path
 
     try:
