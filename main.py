@@ -2,10 +2,11 @@ import mysql
 import mysql.connector
 
 from config import config as cfg
+from config import config_dev as cfgdev
 from sshtunnel import SSHTunnelForwarder
 from src.queries_execution import execute_query
 from src.api_data_retrieve import load_data_to_database
-from src.queries_db_script import query_1, query_2, query_3, query_4, query_5
+from src.queries_db_script import query_1, query_2, query_3, query_4, query_5, query_6
 from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
 
@@ -23,12 +24,12 @@ def main():
 
     print("establishing SSH tunnel...")
     with SSHTunnelForwarder(
-            ssh_address_or_host=cfg.SSH_CONFIG['ssh_address_or_host'],
-            ssh_username=cfg.SSH_CONFIG['ssh_username'],
-            # ssh_password=cfg.SSH_CONFIG['ssh_password'],
-            ssh_pkey=cfg.SSH_CONFIG['ssh_pkey'],  # Use OpenSSH key
-            remote_bind_address=cfg.SSH_CONFIG['remote_bind_address'],
-            local_bind_address=cfg.SSH_CONFIG['local_bind_address']
+            ssh_address_or_host=cfgdev.SSH_CONFIG['ssh_address_or_host'],
+            ssh_username=cfgdev.SSH_CONFIG['ssh_username'],
+            # ssh_password=cfgdev.SSH_CONFIG['ssh_password'],
+            ssh_pkey=cfgdev.SSH_CONFIG['ssh_pkey'],  # Use OpenSSH key
+            remote_bind_address=cfgdev.SSH_CONFIG['remote_bind_address'],
+            local_bind_address=cfgdev.SSH_CONFIG['local_bind_address']
     ) as tunnel:
 
         print(f"tunnel established: Local port {tunnel.local_bind_port}")
@@ -59,6 +60,7 @@ def main():
                 execute_query(connection, query_3, "Comedy")
                 execute_query(connection, query_4, "Drama")
                 execute_query(connection, query_5)
+                execute_query(connection, query_6, "The Hitchhiker's Guide to the Galaxy")
             except mysql.connector.Error as error:
                 print("Failed to execute query: {}".format(error))
 
