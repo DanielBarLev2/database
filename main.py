@@ -45,7 +45,7 @@ def main():
                 connection_timeout=60
             )
 
-            cursor = connection.cursor(prepared=True)   # Create a MySQLCursorPrepared cursor to enable prepared statements
+            # cursor = connection.cursor(prepared=True)   # Create a MySQLCursorPrepared cursor to enable prepared statements
 
             # inp = input("drop all tables? (yes)")
             # if inp.lower() == "yes":

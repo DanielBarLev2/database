@@ -153,8 +153,9 @@ def create_database_schema(cursor):
         cursor.execute("CREATE INDEX idx_movies_vote_average ON Movies(vote_average);")
         print("+ B-tree index added to Movies.vote_average")
 
-        cursor.execute("CREATE INDEX idx_movies_production_companies_pcompany_id ON Movies_Production_Companies(production_company_id);")
-        print("+ B-tree index added to Movies_Production_Companies.production_company_id")
+        # mysql should automatically create indexes for FKs to enforce constraints.
+        # cursor.execute("CREATE INDEX idx_movies_production_companies_pcompany_id ON Movies_Production_Companies(production_company_id);")
+        # print("+ B-tree index added to Movies_Production_Companies.production_company_id")
 
         cursor.execute("CREATE INDEX idx_movies_title ON Movies(title);")
         print("+ B-tree index added to Movies.title")
