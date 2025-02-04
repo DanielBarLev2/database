@@ -116,8 +116,11 @@ def create_database_schema(cursor):
     }
 
     for table, query in tables.items():
-        cursor.execute(query)
-        print(f"+ {table} table was created")
+        try:
+            cursor.execute(query)
+            print(f"+ {table} table was created")
+        except Exception as e:
+            print(f"Error creating {table}: {e}")
 
     try:
         cursor.execute("ALTER TABLE Movies ADD FULLTEXT(overview);")
