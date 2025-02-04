@@ -133,8 +133,9 @@ def create_database_schema(cursor):
         cursor.execute("CREATE INDEX idx_movies_popularity ON Movies(popularity);")
         print("+ B-tree index added to Movies.popularity")
 
-        cursor.execute("CREATE INDEX idx_movies_actors_actor_id ON Movies_Actors(actor_id);")
-        print("+ B-tree index added to Movies_Actors.actor_id")
+        # mysql should automatically create indexes for FKs to enforce constraints.
+        # cursor.execute("CREATE INDEX idx_movies_actors_actor_id ON Movies_Actors(actor_id);")
+        # print("+ B-tree index added to Movies_Actors.actor_id")
 
         cursor.execute("CREATE INDEX idx_movies_revenue_budget ON Movies(revenue, budget);")
         print("+ B-tree composite index added to Movies(revenue, budget)")
@@ -142,8 +143,9 @@ def create_database_schema(cursor):
         cursor.execute("CREATE INDEX idx_genres_genre_name ON Genres(genre_name);")
         print("+ B-tree index added to Genres.genre_name")
 
-        cursor.execute("CREATE INDEX idx_movies_genres_genre_id ON Movies_Genres(genre_id);")
-        print("+ B-tree index added to Movies_Genres.genre_id")
+        # mysql should automatically create indexes for FKs to enforce constraints.
+        # cursor.execute("CREATE INDEX idx_movies_genres_genre_id ON Movies_Genres(genre_id);")
+        # print("+ B-tree index added to Movies_Genres.genre_id")
 
         cursor.execute("CREATE INDEX idx_movies_vote_average ON Movies(vote_average);")
         print("+ B-tree index added to Movies.vote_average")

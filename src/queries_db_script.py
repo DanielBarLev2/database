@@ -34,7 +34,7 @@ def query_1(connection, keyword, limit=10):
 def query_2(connection, keyword):
     """
     Finds actors with the same name (e.g. last or first) and counts how many movies they appeared in.
-    Use Case: identifying acting dynasties (e.g., Coppola, Skarsgård)
+    Use Case: identifying acting dynasties (e.g., Fonda, Skarsgård)
     """
     query = """
             SELECT a.actor_id, a.name, COUNT(ma.movie_id) AS movie_count
