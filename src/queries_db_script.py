@@ -1,43 +1,59 @@
 """ Includes functions for your DB queries (query NUM). """
 
 
-def query_1(connection, keyword):
+def query_1(connection, keyword, limit=10):
     """
     Searches for movies by overview keyword and ranks results by relevance and popularity.
     """
+    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+        limit = 10
     query = """
-            SELECT movie_id, title, overview, popularity, 
-                   MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE) AS relevance
-            FROM Movies 
-            WHERE MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE)
-            ORDER BY relevance DESC, popularity DESC
-            LIMIT 10;
-        """
-    cursor = connection.cursor()
-    cursor.execute(query, (keyword, keyword))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+            SELECT movie_id, title, overview, popularity, relevance
+            FROM (
+                SELECT movie_id, title, overview, popularity, 
+                       MATCH(overview) AGAINST (%s IN NATURAL LANGUAGE MODE) AS relevance
+                FROM Movies
+            ) AS subquery
+            WHERE relevance > 0
+            ORDER BY relevance DESC, popularity DESC    -- break ties by movie popularity
+            LIMIT ?;
+            """
+    cursor = connection.cursor(prepared=True)     # will prepare the statement once
+    try:
+        cursor.execute(query, (keyword, limit))     # execute using prepared statement
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_1: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
 def query_2(connection, keyword):
     """
-    Finds actors by name and counts how many movies they appeared in.
+    Finds actors with the same name (e.g. last or first) and counts how many movies they appeared in.
+    Use Case: identifying acting dynasties (e.g., Fonda, Skarsgård)
     """
     query = """
             SELECT a.actor_id, a.name, COUNT(ma.movie_id) AS movie_count
             FROM Actors a
             JOIN Movies_Actors ma ON a.actor_id = ma.actor_id
-            WHERE a.name = %s
+            WHERE MATCH(a.name) AGAINST (%s IN NATURAL LANGUAGE MODE)
             GROUP BY a.actor_id, a.name
             ORDER BY movie_count DESC;
             """
-    cursor = connection.cursor()
-    cursor.execute(query, (keyword,))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query, (keyword,))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_2: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -46,12 +62,11 @@ def query_3(connection, genre):
     Finds the top 5 most profitable movies in a genre and compares them to the genre's average profit.
     """
     query = """
-            SELECT m.movie_id, m.title, (m.revenue - m.budget) AS profit,
-                   (SELECT AVG(m2.revenue - m2.budget) 
-                    FROM Movies m2
-                    JOIN Movies_Genres mg2 ON m2.movie_id = mg2.movie_id
-                    JOIN Genres g2 ON mg2.genre_id = g2.genre_id
-                    WHERE g2.genre_name = %s) AS avg_profit
+            SELECT 
+                m.movie_id, 
+                m.title, 
+                (m.revenue - m.budget) AS profit,
+                AVG(m.revenue - m.budget) OVER (PARTITION BY g.genre_name) AS avg_profit
             FROM Movies m
             JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
             JOIN Genres g ON mg.genre_id = g.genre_id
@@ -59,38 +74,59 @@ def query_3(connection, genre):
             ORDER BY profit DESC
             LIMIT 5;
             """
-    cursor = connection.cursor()
-    cursor.execute(query, (genre, genre))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query, (genre,))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_3: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
 def query_4(connection, genre):
     """
-    Finds 10 actors who appeared in movies with a vote average above the genre's average.
+    Finds 10 actors who appeared in movies of a given genre with a vote average above the genre's average.
+    The actors are ordered by the number of genre's high-rated movies they have appeared in.
     """
+
+    # the CTE ensures avg_vote is computed once and will be available for all rows
+    # only considers movies from the given genre for counting
+    # only counts movies rated higher than the genre's average
     query = """
-            SELECT DISTINCT a.actor_id, a.name, COUNT(m.movie_id) AS high_rated_movies
+            WITH GenreAvg AS (
+                SELECT AVG(m.vote_average) AS avg_vote
+                FROM Movies m
+                JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
+                JOIN Genres g ON mg.genre_id = g.genre_id
+                WHERE g.genre_name = %s
+            )
+            SELECT a.actor_id, a.name, COUNT(m.movie_id) AS high_rated_movies
             FROM Actors a
             JOIN Movies_Actors ma ON a.actor_id = ma.actor_id
             JOIN Movies m ON ma.movie_id = m.movie_id
-            WHERE m.vote_average > 
-                  (SELECT AVG(m2.vote_average) 
-                   FROM Movies m2
-                   JOIN Movies_Genres mg ON m2.movie_id = mg.movie_id
-                   JOIN Genres g ON mg.genre_id = g.genre_id
-                   WHERE g.genre_name = %s)
+            JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
+            JOIN Genres g ON mg.genre_id = g.genre_id
+            JOIN GenreAvg ON 1=1
+            WHERE g.genre_name = %s
+            AND m.vote_average > GenreAvg.avg_vote
             GROUP BY a.actor_id, a.name
             ORDER BY high_rated_movies DESC
             LIMIT 10;
             """
-    cursor = connection.cursor()
-    cursor.execute(query, (genre,))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query, (genre, genre))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_4: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -111,9 +147,60 @@ def query_5(connection):
             ORDER BY total_revenue DESC, avg_revenue_per_movie DESC
             LIMIT 5;
             """
-    cursor = connection.cursor()
-    cursor.execute(query)
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_5: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
+
+
+def query_6(connection, movie_title, limit=10):
+    """
+    Suggests movies related to the given title based on shared keywords, ranked by popularity.
+    If several movies with given title exist, chooses the most popular.
+    """
+    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+        limit = 10
+    query = """
+            WITH MovieID AS (
+                SELECT movie_id
+                FROM Movies
+                WHERE title = %s
+                ORDER BY popularity DESC
+                LIMIT 1
+            ),
+            MovieKeywords AS (
+                SELECT mk.keyword_id
+                FROM Movies_Keywords mk
+                JOIN MovieID mid ON mk.movie_id = mid.movie_id
+            )
+            SELECT m.movie_id, m.title, m.popularity, COUNT(mk.keyword_id) AS shared_keywords
+            FROM Movies_Keywords mk
+            JOIN MovieKeywords mk_ref ON mk.keyword_id = mk_ref.keyword_id
+            JOIN Movies m ON mk.movie_id = m.movie_id
+            WHERE mk.movie_id NOT IN (SELECT movie_id FROM MovieID)
+            GROUP BY m.movie_id, m.title, m.popularity
+            ORDER BY shared_keywords DESC, m.popularity DESC
+            LIMIT ?;
+            """
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query, (movie_title, limit))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        if not results:
+            print(f"No recommendations found for '{movie_title}'.")
+
+    except Exception as e:
+        print(f"Error executing query_6: {e}")
+        return [], []
+    finally:
+        cursor.close()
+    return results, column_names
+
