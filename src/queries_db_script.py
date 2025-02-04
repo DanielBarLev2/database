@@ -74,25 +74,36 @@ def query_3(connection, genre):
 
 def query_4(connection, genre):
     """
-    Finds 10 actors who appeared in movies with a vote average above the genre's average.
+    Finds 10 actors who appeared in movies of a given genre with a vote average above the genre's average.
+    The actors are ordered by the number of genre's high-rated movies they have appeared in.
     """
+
+    # the CTE ensures avg_vote is computed once and will be available for all rows
+    # only considers movies from the given genre for counting
+    # only counts movies rated higher than the genre's average
     query = """
-            SELECT DISTINCT a.actor_id, a.name, COUNT(m.movie_id) AS high_rated_movies
+            WITH GenreAvg AS (
+                SELECT AVG(m.vote_average) AS avg_vote
+                FROM Movies m
+                JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
+                JOIN Genres g ON mg.genre_id = g.genre_id
+                WHERE g.genre_name = %s
+            )
+            SELECT a.actor_id, a.name, COUNT(m.movie_id) AS high_rated_movies
             FROM Actors a
             JOIN Movies_Actors ma ON a.actor_id = ma.actor_id
             JOIN Movies m ON ma.movie_id = m.movie_id
-            WHERE m.vote_average > 
-                  (SELECT AVG(m2.vote_average) 
-                   FROM Movies m2
-                   JOIN Movies_Genres mg ON m2.movie_id = mg.movie_id
-                   JOIN Genres g ON mg.genre_id = g.genre_id
-                   WHERE g.genre_name = %s)
+            JOIN Movies_Genres mg ON m.movie_id = mg.movie_id
+            JOIN Genres g ON mg.genre_id = g.genre_id
+            JOIN GenreAvg ON 1=1
+            WHERE g.genre_name = %s
+            AND m.vote_average > GenreAvg.avg_vote
             GROUP BY a.actor_id, a.name
             ORDER BY high_rated_movies DESC
             LIMIT 10;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query, (genre,))
+    cursor.execute(query, (genre, genre))
     results = cursor.fetchall()
     column_names = [desc[0] for desc in cursor.description]
     cursor.close()
