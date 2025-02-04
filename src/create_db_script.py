@@ -153,6 +153,9 @@ def create_database_schema(cursor):
         cursor.execute("CREATE INDEX idx_movies_production_companies_pcompany_id ON Movies_Production_Companies(production_company_id);")
         print("+ B-tree index added to Movies_Production_Companies.production_company_id")
 
+        cursor.execute("CREATE INDEX idx_movies_title ON Movies(title);")
+        print("+ B-tree index added to Movies.title")
+
     except Exception as e:
         print(f"Error adding B-tree indexes: {e}")
 

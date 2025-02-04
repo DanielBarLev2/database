@@ -7,7 +7,7 @@ import mysql.connector
 from config import config as cfg
 from sshtunnel import SSHTunnelForwarder
 from src.api_data_retrieve import load_data_to_database
-from src.queries_db_script import query_1, query_2, query_3, query_4, query_5
+from src.queries_db_script import query_1, query_2, query_3, query_4, query_5, query_6
 from src.create_db_script import download_and_extract_dataset, create_database_schema, drop_all_tables
 
 
@@ -96,6 +96,7 @@ def main():
             execute_query(connection, query_3, "Comedy")
             execute_query(connection, query_4, "Drama")
             execute_query(connection, query_5)
+            execute_query(connection, query_6, "The Hitchhiker's Guide to the Galaxy")
         except mysql.connector.Error as error:
             print("Failed to execute query: {}".format(error))
 

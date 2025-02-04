@@ -158,3 +158,49 @@ def query_5(connection):
     finally:
         cursor.close()
     return results, column_names
+
+
+def query_6(connection, movie_title, limit=10):
+    """
+    Suggests movies related to the given title based on shared keywords, ranked by popularity.
+    If several movies with given title exist, chooses the most popular.
+    """
+    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+        limit = 10
+    query = """
+            WITH MovieID AS (
+                SELECT movie_id
+                FROM Movies
+                WHERE title = %s
+                ORDER BY popularity DESC
+                LIMIT 1
+            ),
+            MovieKeywords AS (
+                SELECT mk.keyword_id
+                FROM Movies_Keywords mk
+                JOIN MovieID mid ON mk.movie_id = mid.movie_id
+            )
+            SELECT m.movie_id, m.title, m.popularity, COUNT(mk.keyword_id) AS shared_keywords
+            FROM Movies_Keywords mk
+            JOIN MovieKeywords mk_ref ON mk.keyword_id = mk_ref.keyword_id
+            JOIN Movies m ON mk.movie_id = m.movie_id
+            WHERE mk.movie_id NOT IN (SELECT movie_id FROM MovieID)
+            GROUP BY m.movie_id, m.title, m.popularity
+            ORDER BY shared_keywords DESC, m.popularity DESC
+            LIMIT ?;
+            """
+    cursor = connection.cursor(prepared=True)
+    try:
+        cursor.execute(query, (movie_title, limit))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        if not results:
+            print(f"No recommendations found for '{movie_title}'.")
+
+    except Exception as e:
+        print(f"Error executing query_6: {e}")
+        return [], []
+    finally:
+        cursor.close()
+    return results, column_names
+
