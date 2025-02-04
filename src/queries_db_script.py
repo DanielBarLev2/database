@@ -5,7 +5,7 @@ def query_1(connection, keyword, limit=10):
     """
     Searches for movies by overview keyword and ranks results by relevance and popularity.
     """
-    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+    if not isinstance(limit, int) or limit <= 0 or limit > 10000:  # Validate limit input
         limit = 10
     query = """
             SELECT movie_id, title, overview, popularity, relevance
@@ -165,7 +165,7 @@ def query_6(connection, movie_title, limit=10):
     Suggests movies related to the given title based on shared keywords, ranked by popularity.
     If several movies with given title exist, chooses the most popular.
     """
-    if not isinstance(limit, int) or limit <= 0:  # Validate limit input
+    if not isinstance(limit, int) or limit <= 0 or limit > 10000:  # Validate limit input
         limit = 10
     query = """
             WITH MovieID AS (

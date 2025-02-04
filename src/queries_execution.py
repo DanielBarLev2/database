@@ -80,7 +80,8 @@ def main():
             connection_timeout=60
         )
 
-        # cursor = connection.cursor(prepared=True)   # Create a MySQLCursorPrepared cursor to enable prepared statements for batch inserts
+        # cursor = connection.cursor(prepared=True)   # for insert_data_row_by_row: Create a MySQLCursorPrepared cursor to enable prepared statements for batch inserts
+        # cursor = connection.cursor()
 
         # inp = input("drop all tables? (yes)")
         # if inp.lower() == "yes":
