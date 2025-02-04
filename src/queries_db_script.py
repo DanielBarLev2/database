@@ -132,7 +132,8 @@ def query_4(connection, genre):
 
 def query_5(connection):
     """
-    Finds the top 5 production companies by movie count and their total revenue.
+    Finds the top 5 production companies ranked by total revenue, considering only companies that
+    have produced more than 5 movies. Tiebreaker: average revenue per movie.
     """
     query = """
             SELECT pc.production_company_name, 
