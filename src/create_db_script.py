@@ -85,7 +85,7 @@ def create_database_schema(cursor):
                 FOREIGN KEY (movie_id) REFERENCES Movies(movie_id),
                 FOREIGN KEY (keyword_id) REFERENCES Keywords(keyword_id)
                 );""",
-        "production_Companies": """
+        "Production_Companies": """
             CREATE TABLE IF NOT EXISTS Production_Companies (
                 production_company_id INT PRIMARY KEY,
                 production_company_name VARCHAR(128)
