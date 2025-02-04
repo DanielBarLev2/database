@@ -19,10 +19,15 @@ def query_1(connection, keyword, limit=10):
             LIMIT ?;
             """
     cursor = connection.cursor(prepared=True)     # will prepare the statement once
-    cursor.execute(query, (keyword, limit))     # execute using prepared statement
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    try:
+        cursor.execute(query, (keyword, limit))     # execute using prepared statement
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_1: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -40,10 +45,15 @@ def query_2(connection, keyword):
             ORDER BY movie_count DESC;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query, (keyword,))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    try:
+        cursor.execute(query, (keyword,))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_2: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -65,10 +75,15 @@ def query_3(connection, genre):
             LIMIT 5;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query, (genre,))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    try:
+        cursor.execute(query, (genre,))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_3: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -103,10 +118,15 @@ def query_4(connection, genre):
             LIMIT 10;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query, (genre, genre))
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    try:
+        cursor.execute(query, (genre, genre))
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_4: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
 
 
@@ -128,8 +148,13 @@ def query_5(connection):
             LIMIT 5;
             """
     cursor = connection.cursor(prepared=True)
-    cursor.execute(query)
-    results = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description]
-    cursor.close()
+    try:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+    except Exception as e:
+        print(f"Error executing query_5: {e}")
+        return [], []
+    finally:
+        cursor.close()
     return results, column_names
